@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Settings, Activity, Cpu, Leaf, Zap, Wrench, Download, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Upload, Settings, Activity, Cpu, Leaf, Zap, Wrench, Download, AlertTriangle, CheckCircle, FileDiff } from 'lucide-react';
 import SafeSlider from './SafeSlider';
 import FirmwareExplorer from './FirmwareExplorer';
 

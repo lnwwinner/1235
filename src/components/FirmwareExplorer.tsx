@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, FileDiff, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Search, Download, FileDiff, CheckCircle, AlertTriangle, Cpu } from 'lucide-react';
 
 interface FirmwareExplorerProps {
   currentFileMetadata: any;
@@ -12,12 +12,19 @@ export default function FirmwareExplorer({ currentFileMetadata, onCompare }: Fir
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSearch = async () => {
-    if (!searchQuery) return;
+  const handleSearch = async (useDetectedIds = false) => {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`/api/firmware-search?query=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch('/api/firmware-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hw_id: currentFileMetadata?.hw_id,
+          sw_id: currentFileMetadata?.sw_id,
+          query: useDetectedIds ? '' : searchQuery
+        })
+      });
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       setSearchResults(data);
@@ -28,6 +35,21 @@ export default function FirmwareExplorer({ currentFileMetadata, onCompare }: Fir
     }
   };
 
+  const handleDownload = async (url: string, title: string) => {
+    try {
+      const response = await fetch('/api/firmware-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, filename: `${title || 'firmware'}.bin` })
+      });
+      if (!response.ok) throw new Error('Download failed');
+      const data = await response.json();
+      alert(data.message);
+    } catch (err) {
+      alert('Failed to download firmware to workspace.');
+    }
+  };
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
       <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
@@ -35,22 +57,35 @@ export default function FirmwareExplorer({ currentFileMetadata, onCompare }: Fir
         Firmware Explorer
       </h2>
       
-      <div className="flex gap-3 mb-6">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search firmware (e.g., Bosch EDC17C46 .ori)"
-          className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <button
-          onClick={handleSearch}
-          disabled={loading}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-        >
-          {loading ? 'Searching...' : 'Search'}
-        </button>
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search firmware (e.g., Bosch EDC17C46 .ori)"
+            className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+          />
+          <button
+            onClick={() => handleSearch()}
+            disabled={loading}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading ? '...' : <Search className="w-4 h-4" />}
+          </button>
+        </div>
+        
+        {currentFileMetadata?.hw_id && (
+          <button
+            onClick={() => handleSearch(true)}
+            disabled={loading}
+            className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700 py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            Search Online Firmware (Auto-ID)
+          </button>
+        )}
       </div>
 
       {error && (
@@ -79,13 +114,22 @@ export default function FirmwareExplorer({ currentFileMetadata, onCompare }: Fir
                         {link.uri}
                       </a>
                     </div>
-                    <button
-                      onClick={() => onCompare(link.uri)}
-                      className="ml-4 shrink-0 flex items-center gap-2 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium rounded-md transition-colors"
-                    >
-                      <FileDiff className="w-3.5 h-3.5" />
-                      Compare
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDownload(link.uri, link.title)}
+                        className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-400 text-xs font-medium rounded-md transition-colors"
+                        title="Download to Workspace"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => onCompare(link.uri)}
+                        className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-xs font-medium rounded-md transition-colors"
+                      >
+                        <FileDiff className="w-3.5 h-3.5" />
+                        Compare
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>

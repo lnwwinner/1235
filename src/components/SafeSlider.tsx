@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface SafeSliderProps {
+  key?: any;
   mapName: string;
   currentValue: number;
   strategy: string;
@@ -67,25 +68,25 @@ export default function SafeSlider({ mapName, currentValue, strategy, onChange }
           step={currentValue * 0.01}
           value={value}
           onChange={handleSliderChange}
-          className={\`w-full h-2 rounded-lg appearance-none cursor-pointer \${sliderColor}\`}
+          className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${sliderColor}`}
           style={{
-            background: \`linear-gradient(to right, 
-              \${riskScore < 50 ? '#22c55e' : riskScore < 80 ? '#eab308' : '#ef4444'} \${((value - currentValue * 0.8) / (currentValue * 1.5 - currentValue * 0.8)) * 100}%, 
-              #3f3f46 \${((value - currentValue * 0.8) / (currentValue * 1.5 - currentValue * 0.8)) * 100}%)\`
+            background: `linear-gradient(to right, 
+              ${riskScore < 50 ? '#22c55e' : riskScore < 80 ? '#eab308' : '#ef4444'} ${((value - currentValue * 0.8) / (currentValue * 1.5 - currentValue * 0.8)) * 100}%, 
+              #3f3f46 ${((value - currentValue * 0.8) / (currentValue * 1.5 - currentValue * 0.8)) * 100}%)`
           }}
         />
       </div>
       
       <div className="flex justify-between mt-2 text-xs">
         <span className="text-zinc-500">Min</span>
-        <span className={\`font-medium \${riskScore > 80 ? 'text-red-400' : 'text-zinc-400'}\`}>
+        <span className={`font-medium ${riskScore > 80 ? 'text-red-400' : 'text-zinc-400'}`}>
           Risk: {riskScore.toFixed(0)}%
         </span>
         <span className="text-zinc-500">Max (Limit: {hardLimit.toFixed(2)})</span>
       </div>
       
       {message && (
-        <p className={\`mt-2 text-xs \${riskScore >= 100 ? 'text-red-400 font-bold' : 'text-zinc-400'}\`}>
+        <p className={`mt-2 text-xs ${riskScore >= 100 ? 'text-red-400 font-bold' : 'text-zinc-400'}`}>
           {message}
         </p>
       )}

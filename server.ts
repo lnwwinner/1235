@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import multer from 'multer';
+const multer = require('multer');
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
 import path from 'path';
@@ -19,17 +19,19 @@ async function startServer() {
   // API Routes
 
   // 1. File Upload & Metadata Extraction
-  app.post('/api/upload', upload.single('file'), (req, res) => {
+  app.post('/api/upload', upload.single('file'), (req: any, res) => {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
     
-    // Placeholder for metadata extraction
+    // Mock metadata extraction with HW/SW IDs
     const metadata = {
       filename: req.file.originalname,
       size: req.file.size,
       type: path.extname(req.file.originalname),
-      status: 'File uploaded successfully. Ready for analysis.',
+      hw_id: 'HW_BOSCH_EDC17C46', // Mocked detection
+      sw_id: 'SW_1037512345',      // Mocked detection
+      status: 'File uploaded successfully. HW/SW IDs detected.',
     };
 
     res.json(metadata);
@@ -95,18 +97,18 @@ async function startServer() {
     });
   });
 
-  // 4. Firmware DB Search (Google Search Grounding)
-  app.get('/api/firmware-search', async (req, res) => {
-    const { query } = req.query;
+  // 4. Enhanced Firmware DB Search (Google Search Grounding)
+  app.post('/api/firmware-search', async (req, res) => {
+    const { hw_id, sw_id, query } = req.body;
     
-    if (!query) {
-      return res.status(400).json({ error: 'Query parameter is required' });
-    }
+    const searchQuery = query || `ECU firmware original file HW: ${hw_id} SW: ${sw_id} .bin .ori`;
 
     try {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Search for online firmware files or original ECU files (.ori, .bin) for: ${query}. Provide a brief summary and links if found.`,
+        contents: `Search for direct download links of original ECU firmware files (.bin or .hex) for: ${searchQuery}. 
+        Focus on finding files that match standard ECU sizes (1MB, 2MB, 4MB). 
+        Provide a list of potential download URLs and their descriptions.`,
         config: {
           tools: [{ googleSearch: {} }],
         }
@@ -117,11 +119,46 @@ async function startServer() {
 
       res.json({
         summary: response.text,
-        links: links
+        links: links,
+        detected_ids: { hw_id, sw_id }
       });
     } catch (error) {
       console.error('Firmware Search Error:', error);
       res.status(500).json({ error: 'Failed to search firmware' });
+    }
+  });
+
+  // 4b. Firmware Download & Validation
+  app.post('/api/firmware-download', async (req, res) => {
+    const { url, filename } = req.body;
+    
+    try {
+      // In a real scenario, we might call the python script here.
+      // For the preview, we'll simulate the download and validation.
+      
+      const mockDownloadDir = 'uploads/online_firmware/';
+      if (!fs.existsSync(mockDownloadDir)) {
+        fs.mkdirSync(mockDownloadDir, { recursive: true });
+      }
+
+      // Simulate validation (e.g., checking if it's a 2MB file)
+      const isValidSize = true; // Mocked validation logic
+      
+      if (!isValidSize) {
+        return res.status(400).json({ error: 'File failed size validation (Expected 1MB, 2MB, or 4MB)' });
+      }
+
+      const filePath = path.join(mockDownloadDir, filename || 'downloaded_firmware.bin');
+      fs.writeFileSync(filePath, 'Mock Binary Data'); // Simulated download
+
+      res.json({
+        status: 'success',
+        message: 'Firmware downloaded and validated successfully.',
+        path: filePath,
+        filename: filename
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Download failed' });
     }
   });
 
